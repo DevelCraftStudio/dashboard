@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analytics · Quizzes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!--
+    HEADER
+    O seletor de quiz consome GET http://localhost:8080/quiz, que retorna
+    uma lista de { name, slug }. O dropdown já é renderizado em loop, então
+    aceita quantos itens vierem do backend sem precisar de ajuste.
+  -->
+    <header class="topbar">
+      <div class="topbar__brand">
+        <span class="topbar__mark">Q</span>
+        <span class="topbar__name">Analytics</span>
+      </div>
+
+      <div class="topbar__quiz" id="quizSelector">
+        <div class="quiz-picker-group">
+          <button
+            class="quiz-picker"
+            id="quizPickerBtn"
+            disabled
+            aria-haspopup="listbox"
+            aria-expanded="false"
+          >
+            <span class="quiz-picker__label" id="currentQuizName"
+              >Carregando quizzes…</span
+            >
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+              <path
+                d="M1 1L5 5L9 1"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            class="quiz-picker-add"
+            id="newQuizBtn"
+            disabled
+            title="Novo quiz"
+            aria-label="Novo quiz"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M7 1V13M1 7H13"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div class="quiz-dropdown" id="quizDropdown">
+          <ul class="quiz-dropdown__list" id="quizDropdownList" role="listbox">
+            <!-- itens renderizados via JS -->
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="page__head">
+        <div>
+          <p class="eyebrow" id="periodEyebrow">Últimos 7 dias</p>
+          <h1 class="page__title" id="dashboardQuizName">Quiz</h1>
+        </div>
+
+        <div class="period-switch" id="periodSwitch">
+          <button class="period-switch__btn" data-period="TODAY">Hoje</button>
+          <button
+            class="period-switch__btn is-active"
+            data-period="LAST_7_DAYS"
+          >
+            7 dias
+          </button>
+          <button class="period-switch__btn" data-period="LAST_30_DAYS">
+            30 dias
+          </button>
+          <button class="period-switch__btn" data-period="SPECIFIC_DAY">
+            Dia específico
+          </button>
+          <input
+            type="date"
+            class="period-switch__date"
+            id="specificDateInput"
+          />
+        </div>
+      </div>
+
+      <!-- CARDS -->
+      <section class="cards" id="summaryCards" aria-label="Resumo de métricas">
+        <article class="card" data-metric="entered">
+          <p class="card__label">Entraram no quiz</p>
+          <p class="card__value" data-value>—</p>
+          <span class="card__track"
+            ><span class="card__fill" data-fill style="width: 100%"></span
+          ></span>
+          <p class="card__hint">100% da base</p>
+        </article>
+
+        <article class="card" data-metric="completed">
+          <p class="card__label">Completaram o quiz</p>
+          <p class="card__value" data-value>—</p>
+          <span class="card__track"
+            ><span class="card__fill" data-fill></span
+          ></span>
+          <p class="card__hint" data-hint>—</p>
+        </article>
+
+        <article class="card" data-metric="viewedOffer">
+          <p class="card__label">Chegaram na oferta</p>
+          <p class="card__value" data-value>—</p>
+          <span class="card__track"
+            ><span class="card__fill" data-fill></span
+          ></span>
+          <p class="card__hint" data-hint>—</p>
+        </article>
+
+        <article class="card card--accent" data-metric="clickedOffer">
+          <p class="card__label">Concluíram</p>
+          <p class="card__value" data-value>—</p>
+          <span class="card__track card__track--light"
+            ><span class="card__fill card__fill--light" data-fill></span
+          ></span>
+          <p class="card__hint" data-hint>—</p>
+        </article>
+      </section>
+
+      <!-- FUNIL -->
+      <section class="panel" aria-label="Funil do quiz">
+        <div class="panel__head">
+          <h2 class="panel__title">Funil</h2>
+          <p class="panel__subtitle">
+            Etapa a etapa, do início ao fim. A barra mostra a retenção em
+            relação à primeira etapa
+            <span class="legend-dot legend-dot--success"></span> e a queda em
+            relação à etapa anterior
+            <span class="legend-dot legend-dot--danger"></span>. Perguntas
+            trazem a distribuição de respostas logo abaixo.
+          </p>
+        </div>
+
+        <div class="funnel-head" aria-hidden="true">
+          <span class="funnel-head__spacer"></span>
+          <span class="funnel-head__cols">
+            <span>Etapa</span>
+            <span>Retenção</span>
+            <span>Pessoas</span>
+            <span>Queda</span>
+          </span>
+        </div>
+
+        <div class="funnel" id="funnelList">
+          <!-- linhas renderizadas via JS -->
+        </div>
+      </section>
+    </main>
+
+    <!--
+    MODAL · NOVO QUIZ
+    Fica fora do <main> pra sobrepor tudo via overlay em tela cheia.
+    Escondido por padrão (classe is-open controla visibilidade).
+  -->
+    <div class="modal-overlay" id="newQuizOverlay">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="newQuizTitle"
+      >
+        <div class="modal__head">
+          <h2 class="modal__title" id="newQuizTitle">Novo quiz</h2>
+          <button
+            type="button"
+            class="modal__close"
+            id="newQuizClose"
+            aria-label="Fechar"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M1 1L13 13M13 1L1 13"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form class="modal__body" id="newQuizForm" novalidate>
+          <label class="field">
+            <span class="field__label">Nome do quiz</span>
+            <input
+              type="text"
+              class="field__input"
+              id="newQuizName"
+              placeholder="Ex: Quiz de Emagrecimento"
+              autocomplete="off"
+              required
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Slug</span>
+            <input
+              type="text"
+              class="field__input field__input--mono"
+              id="newQuizSlug"
+              placeholder="gerado-automaticamente"
+              readonly
+              tabindex="-1"
+            />
+            <span class="field__hint" id="newQuizSlugHint" hidden></span>
+          </label>
+
+          <p class="field__error" id="newQuizError" hidden></p>
+
+          <div class="modal__actions">
+            <button type="button" class="btn btn--secondary" id="newQuizCancel">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn btn--primary"
+              id="newQuizSubmit"
+              disabled
+            >
+              Adicionar quiz
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!--
+  Ordem importa:
+  1) storage.js          - não depende de nada, acesso ao LocalStorage
+  2) dashboard.js         - depende de storage.js (POST na API, request
+     a partir do LocalStorage e seletor de período; usa dados falsos
+     como fallback enquanto o servidor está com erro)
+  3) dashboard-render.js  - não depende de nada além do DOM; recebe a
+     resposta pronta e desenha cards + funil
+  4) quiz-list.js         - depende de storage.js (persiste o quiz
+     ativo e dispara "dashboard:reload"); define window.QuizList
+  5) novo-quiz.js         - depende de quiz-list.js (checa colisão de
+     slug e insere o quiz recém-criado)
+  6) javascript.js        - orquestra tudo, escuta "dashboard:reload"
+     e chama renderDashboard()
+-->
+    <script src="script/storage.js"></script>
+    <script src="script/dashboard.js"></script>
+    <script src="script/dashboard-render.js"></script>
+    <script src="script/quiz-list.js"></script>
+    <script src="script/novo-quiz.js"></script>
+    <script src="script/javascript.js"></script>
+  </body>
+</html>
