@@ -1,24 +1,34 @@
 /**
  * dashboard.js
  *
- * Junta as três responsabilidades que antes ficavam separadas em
- * dashboard-api.js, dashboard-request.js e dashboard-period.js:
+ * Responsabilidades:
  *
- *   1. Comunicação HTTP com a API   -> fetchDashboard(slug, body)
- *   2. Montagem do body a partir do LocalStorage -> buildDashboardRequest()
- *   3. Comportamento do seletor de período -> initDashboardPeriod()
+ * 1. Comunicação HTTP com API
+ *    -> fetchDashboard(slug, body)
  *
- * Continua dependendo apenas de window.DashboardStorage (storage.js) —
- * não conhece o resto da aplicação além disso.
+ * 2. Montagem do request
+ *    -> buildDashboardRequest()
  *
- * FALLBACK TEMPORÁRIO: enquanto o endpoint real estiver com erro no
- * servidor, loadDashboardData() cai automaticamente para
- * MOCK_DASHBOARD_RESPONSE quando o POST falha, só pra manter o front
- * testável. Assim que o backend for corrigido, é só remover o
- * try/catch de loadDashboardData (fetchDashboard já lança o erro certo).
+ * 3. Controle do período
+ *    -> initDashboardPeriod()
+ *
+ * 4. Atualização via WebSocket
+ *    -> escuta dashboard:reload
+ *    -> busca dados novamente
+ *    -> dispara dashboard:updated
+ *
+ * Depende apenas de:
+ *
+ * - window.DashboardStorage
+ * - window.QuizList.getSelectedQuiz()
  */
 
-const DASHBOARD_API_BASE_URL = "https://quiz-api-production-3617.up.railway.app/analytics";
+const DASHBOARD_API_BASE_URL =
+  "https://quiz-api-production-3617.up.railway.app/analytics";
+
+// ---------------------------------------------------------------------
+// MOCK TEMPORÁRIO
+// ---------------------------------------------------------------------
 
 const MOCK_DASHBOARD_RESPONSE = {
   summary: {
@@ -30,79 +40,52 @@ const MOCK_DASHBOARD_RESPONSE = {
       viewedOffer: 6200,
       clickedOffer: 1800,
     },
-    questions: [
-      {
-        questionNumber: 1,
-        totalAnswers: 12500,
-        options: [
-          { option: "A", totalAnswers: 4500, percentage: 36.0 },
-          { option: "B", totalAnswers: 5200, percentage: 41.6 },
-          { option: "C", totalAnswers: 1600, percentage: 12.8 },
-          { option: "D", totalAnswers: 1200, percentage: 9.6 },
-        ],
-      },
-      {
-        questionNumber: 2,
-        totalAnswers: 12000,
-        options: [
-          { option: "A", totalAnswers: 5000, percentage: 41.7 },
-          { option: "B", totalAnswers: 4000, percentage: 33.3 },
-          { option: "C", totalAnswers: 2000, percentage: 16.7 },
-          { option: "D", totalAnswers: 1000, percentage: 8.3 },
-        ],
-      },
-    ],
+
+    questions: [],
   },
+
   funnel: {
-    events: [
-      { step: "START", total: 12500, valueRate: 100.0, dropRate: 0.0 },
-      { step: "RESULT_VIEW", total: 8000, valueRate: 64.0, dropRate: 36.0 },
-      { step: "OFFER_CLICK", total: 1800, valueRate: 14.4, dropRate: 77.5 },
-    ],
-    questions: [
-      { question: 1, total: 12000, valueRate: 96.0, dropRate: 4.0 },
-      { question: 2, total: 11400, valueRate: 91.2, dropRate: 5.0 },
-    ],
+    events: [],
+    questions: [],
   },
 };
 
 // ---------------------------------------------------------------------
-// 1) API — comunicação HTTP
+// 1) API
 // ---------------------------------------------------------------------
 
-/**
- * Envia o POST para o endpoint de dashboard de um quiz e retorna o
- * JSON da resposta. Lança um erro quando a resposta não é OK.
- */
 async function fetchDashboard(slug, body) {
-  const res = await fetch(`${DASHBOARD_API_BASE_URL}/${slug}/dashboard`, {
+  const response = await fetch(`${DASHBOARD_API_BASE_URL}/${slug}/dashboard`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+
+    headers: {
+      "Content-Type": "application/json",
+    },
+
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    throw new Error(`Falha ao buscar dashboard (HTTP ${res.status})`);
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar dashboard HTTP ${response.status}`);
   }
 
-  return res.json();
+  return response.json();
 }
 
 // ---------------------------------------------------------------------
-// 2) Request — monta o body a partir do LocalStorage
+// 2) REQUEST
 // ---------------------------------------------------------------------
 
-/**
- * TODAY / LAST_7_DAYS / LAST_30_DAYS -> { period }
- * SPECIFIC_DAY                       -> { period, date }
- */
 function buildDashboardRequest() {
   const period = DashboardStorage.getSelectedPeriod() || "LAST_7_DAYS";
 
-  const request = { period };
+  const request = {
+    period,
+  };
 
   if (period === "SPECIFIC_DAY") {
     const date = DashboardStorage.getSpecificDate();
+
     if (date) {
       request.date = date;
     }
@@ -111,45 +94,41 @@ function buildDashboardRequest() {
   return request;
 }
 
-/**
- * Monta o request e faz o POST. Se o servidor falhar, cai para os
- * dados falsos (MOCK_DASHBOARD_RESPONSE) — ver nota no topo do arquivo.
- */
 async function loadDashboardData(slug) {
   const body = buildDashboardRequest();
 
   try {
     return await fetchDashboard(slug, body);
-  } catch (err) {
-    console.warn(
-      "Falha ao buscar dashboard real (servidor com erro) — usando dados falsos temporariamente.",
-      err,
-    );
+  } catch (error) {
+    console.warn("API indisponível, usando mock", error);
+
     return MOCK_DASHBOARD_RESPONSE;
   }
 }
 
 // ---------------------------------------------------------------------
-// 3) Period — comportamento do seletor de período
+// 3) PERIOD
 // ---------------------------------------------------------------------
 
-// Rótulo mostrado no eyebrow (acima do nome do quiz) pra cada período.
-// SPECIFIC_DAY não entra aqui porque o texto depende da data escolhida
-// (ver formatDateLabel/updateEyebrow).
 const PERIOD_LABELS = {
   TODAY: "Hoje",
+
   LAST_7_DAYS: "Últimos 7 dias",
+
   LAST_30_DAYS: "Últimos 30 dias",
 };
 
-function formatDateLabel(isoDate) {
-  const [year, month, day] = isoDate.split("-");
+function formatDateLabel(date) {
+  const [year, month, day] = date.split("-");
+
   return `${day}/${month}/${year}`;
 }
 
 function initDashboardPeriod() {
   const buttons = document.querySelectorAll(".period-switch__btn");
+
   const dateInput = document.getElementById("specificDateInput");
+
   const eyebrow = document.getElementById("periodEyebrow");
 
   function updateEyebrow(period) {
@@ -157,6 +136,7 @@ function initDashboardPeriod() {
 
     if (period === "SPECIFIC_DAY") {
       const date = DashboardStorage.getSpecificDate();
+
       eyebrow.textContent = date ? formatDateLabel(date) : "Dia específico";
     } else {
       eyebrow.textContent = PERIOD_LABELS[period] || PERIOD_LABELS.LAST_7_DAYS;
@@ -164,59 +144,92 @@ function initDashboardPeriod() {
   }
 
   function setActiveButton(period) {
-    buttons.forEach((btn) => {
-      btn.classList.toggle("is-active", btn.dataset.period === period);
+    buttons.forEach((button) => {
+      button.classList.toggle(
+        "is-active",
+
+        button.dataset.period === period,
+      );
     });
   }
 
-  function toggleDateVisibility(period) {
-    dateInput.classList.toggle("is-visible", period === "SPECIFIC_DAY");
-  }
+  function toggleDate(period) {
+    dateInput.classList.toggle(
+      "is-visible",
 
-  function ensureDateHasValue() {
-    if (!dateInput.value) {
-      dateInput.valueAsDate = new Date();
-    }
-    DashboardStorage.saveSpecificDate(dateInput.value);
+      period === "SPECIFIC_DAY",
+    );
   }
 
   function applyPeriod(period) {
     setActiveButton(period);
-    toggleDateVisibility(period);
-    DashboardStorage.saveSelectedPeriod(period);
 
-    if (period === "SPECIFIC_DAY") {
-      ensureDateHasValue();
-    }
+    toggleDate(period);
+
+    DashboardStorage.saveSelectedPeriod(period);
 
     updateEyebrow(period);
   }
 
   function restoreState() {
-    const savedPeriod = DashboardStorage.getSelectedPeriod() || "LAST_7_DAYS";
-    const savedDate = DashboardStorage.getSpecificDate();
+    const period = DashboardStorage.getSelectedPeriod() || "LAST_7_DAYS";
 
-    if (savedDate) {
-      dateInput.value = savedDate;
+    const date = DashboardStorage.getSpecificDate();
+
+    if (date) {
+      dateInput.value = date;
     }
 
-    // aplica sem disparar reload: a primeira carga do dashboard é
-    // disparada pelo quiz-list.js assim que o quiz ativo é resolvido
-    applyPeriod(savedPeriod);
+    applyPeriod(period);
   }
 
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      applyPeriod(btn.dataset.period);
-      window.dispatchEvent(new CustomEvent("dashboard:reload"));
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      applyPeriod(button.dataset.period);
+
+      window.dispatchEvent(new Event("dashboard:reload"));
     });
   });
 
   dateInput.addEventListener("change", () => {
     DashboardStorage.saveSpecificDate(dateInput.value);
+
     updateEyebrow("SPECIFIC_DAY");
-    window.dispatchEvent(new CustomEvent("dashboard:reload"));
+
+    window.dispatchEvent(new Event("dashboard:reload"));
   });
 
   restoreState();
 }
+
+// ---------------------------------------------------------------------
+// 4) WEBSOCKET INTEGRATION
+// ---------------------------------------------------------------------
+
+window.addEventListener("dashboard:reload", async () => {
+  const quiz =
+    window.QuizList && typeof window.QuizList.getSelectedQuiz === "function"
+      ? window.QuizList.getSelectedQuiz()
+      : null;
+
+  if (!quiz) {
+    console.log("Nenhum quiz selecionado");
+
+    return;
+  }
+
+  const dashboard = await loadDashboardData(quiz.slug);
+
+  window.dispatchEvent(
+    new CustomEvent(
+      "dashboard:updated",
+
+      {
+        detail: dashboard,
+      },
+    ),
+  );
+});
+
+// inicialização do seletor
+document.addEventListener("DOMContentLoaded", initDashboardPeriod);

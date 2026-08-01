@@ -197,7 +197,14 @@ function buildAnswers(options) {
 /**
  * Monta uma linha do funil (etapa comum ou pergunta).
  */
-function buildFunnelRow({ label, total, valueRate, dropRate, isQuestion, options }) {
+function buildFunnelRow({
+  label,
+  total,
+  valueRate,
+  dropRate,
+  isQuestion,
+  options,
+}) {
   const row = document.createElement("div");
   row.className = "funnel-row";
   if (isQuestion) row.classList.add("funnel-row--question");
@@ -284,3 +291,17 @@ function renderDashboard(response) {
   renderCards(response.summary.metrics);
   renderFunnel(response.funnel, response.summary.questions);
 }
+
+// ---------------------------------------------------------------------
+// Atualização automática via WebSocket
+// ---------------------------------------------------------------------
+
+window.addEventListener("dashboard:updated", (event) => {
+  const response = event.detail;
+
+  if (!response) {
+    return;
+  }
+
+  renderDashboard(response);
+});

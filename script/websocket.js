@@ -1,29 +1,34 @@
 /**
  * websocket.js
  *
- * Responsabilidade: manter o dashboard atualizado em tempo real,
- * conectando ao broker STOMP exposto pelo backend (WebSocketConfig.java,
- * endpoint "/ws") e escutando o tópico "/topic/dashboard/{slug}" do
- * quiz ativo.
+ * Responsabilidade:
+ * Manter o dashboard sincronizado em tempo real.
  *
- * O tópico usa o SLUG do quiz, o mesmo identificador usado pela API:
+ * O WebSocket conecta no broker STOMP do backend
+ * (WebSocketConfig.java endpoint "/ws")
+ * e escuta:
+ *
+ * /topic/dashboard/{slug}
+ *
+ * O slug é o mesmo usado pela API:
  *
  * POST /analytics/{slug}/dashboard
  *
- * Quando uma mensagem DASHBOARD_REFRESH chega pelo WebSocket,
- * este arquivo dispara "dashboard:reload" em window.
+ * Quando o backend envia DASHBOARD_REFRESH,
+ * este arquivo dispara o evento "dashboard:reload".
  *
- * Esse mesmo evento já é utilizado pelo dashboard para:
+ * O dashboard é responsável por:
  *
- * - buscar os dados novamente na API
- * - renderizar os cards
- * - renderizar o funil
+ * - buscar os dados atualizados na API
+ * - atualizar os cards
+ * - atualizar gráficos/funil
  *
- * O WebSocket apenas informa que os dados mudaram.
- * Ele não controla o DOM e não recarrega a página.
+ * O WebSocket não controla DOM e não recarrega página.
  *
  * Depende de:
- * - SockJS + StompJS carregados antes deste arquivo
+ *
+ * - SockJS carregado
+ * - StompJS carregado
  * - window.QuizList.getSelectedQuiz()
  */
 
@@ -48,9 +53,6 @@
     return quiz ? quiz.slug : null;
   }
 
-  /**
-   * Inscreve no tópico do quiz atualmente selecionado.
-   */
   function subscribeToActiveQuiz() {
     var slug = getActiveSlug();
 
@@ -76,7 +78,7 @@
       currentSubscription = null;
     }
 
-    console.log("ASSINANDO TÓPICO:", "/topic/dashboard/" + slug);
+    console.log("ASSINANDO:", "/topic/dashboard/" + slug);
 
     currentSlug = slug;
 
@@ -84,14 +86,18 @@
       "/topic/dashboard/" + slug,
 
       function (message) {
-        console.log("WEBSOCKET RECEBIDO:", message.body);
+        console.log("ATUALIZAÇÃO RECEBIDA:", message.body);
 
         /*
-         * Não faz reload da página.
+         * O backend avisou que os dados mudaram.
          *
-         * Apenas avisa o dashboard que novos dados
-         * precisam ser buscados.
+         * O dashboard vai buscar novamente:
+         *
+         * POST /analytics/{slug}/dashboard
+         *
+         * Sem reload de página.
          */
+
         window.dispatchEvent(new Event("dashboard:reload"));
       },
     );
@@ -126,7 +132,7 @@
       },
 
       function onError() {
-        console.log("ERRO NA CONEXÃO WEBSOCKET");
+        console.log("ERRO WEBSOCKET");
 
         isConnecting = false;
 
@@ -142,25 +148,20 @@
       isConnecting = false;
 
       currentSubscription = null;
+      currentSlug = null;
 
       setTimeout(connect, RECONNECT_DELAY_MS);
     };
   }
 
   /*
-   * Reutiliza o evento existente.
+   * O mesmo evento serve para:
    *
-   * Casos:
-   *
-   * 1 - Primeira carga
-   *     quiz-list resolve o quiz ativo.
-   *
-   * 2 - Troca de quiz
-   *     muda inscrição para outro slug.
-   *
-   * 3 - Atualização via WebSocket
-   *     busca novamente os dados.
+   * 1 - carregamento inicial
+   * 2 - troca de quiz
+   * 3 - atualização recebida pelo WebSocket
    */
+
   window.addEventListener("dashboard:reload", subscribeToActiveQuiz);
 
   document.addEventListener("DOMContentLoaded", connect);
