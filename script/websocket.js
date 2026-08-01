@@ -87,7 +87,7 @@
       function (message) {
         console.log("WEBSOCKET RECEBIDO:", message.body);
 
-        window.dispatchEvent(new CustomEvent("dashboard:reload"));
+        location.reload(); // força recarregar a página inteira
       },
     );
   }
