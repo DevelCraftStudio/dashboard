@@ -6,33 +6,32 @@
  * endpoint "/ws") e escutando o tópico "/topic/dashboard/{slug}" do
  * quiz ativo.
  *
- * IMPORTANTE: o tópico usa o SLUG do quiz (mesmo identificador usado
- * em toda a API — POST /analytics/{slug}/dashboard), não um id
- * numérico. Isso exige que AnalyticsWebSocketPublisher.java publique
- * em "/topic/dashboard/" + slug em vez de "/topic/dashboard/" + quizId.
+ * O tópico usa o SLUG do quiz, o mesmo identificador usado pela API:
  *
- * Toda vez que chega uma mensagem DASHBOARD_REFRESH nesse tópico,
- * este arquivo dispara "dashboard:reload" em window — o mesmo evento
- * que quiz-list.js já dispara ao trocar de quiz, e que javascript.js
- * já escuta pra chamar loadDashboardData() + renderDashboard().
+ * POST /analytics/{slug}/dashboard
+ *
+ * Quando uma mensagem DASHBOARD_REFRESH chega pelo WebSocket,
+ * este arquivo dispara "dashboard:reload" em window.
+ *
+ * Esse mesmo evento já é utilizado pelo dashboard para:
+ *
+ * - buscar os dados novamente na API
+ * - renderizar os cards
+ * - renderizar o funil
+ *
+ * O WebSocket apenas informa que os dados mudaram.
+ * Ele não controla o DOM e não recarrega a página.
  *
  * Depende de:
- * - SockJS + StompJS (carregados via CDN no index.html, ANTES deste
- *   arquivo)
- * - window.QuizList.getSelectedQuiz() (definido em quiz-list.js) pra
- *   saber qual é o slug do quiz ativo no momento
- *
- * Não depende de nenhum evento novo: reaproveita o "dashboard:reload"
- * que já é disparado sempre que o quiz ativo muda (activateQuiz em
- * quiz-list.js) ou o período muda (dashboard.js) — nessas horas, além
- * de recarregar os dados, também garante que a inscrição no WebSocket
- * está apontando pro quiz certo.
+ * - SockJS + StompJS carregados antes deste arquivo
+ * - window.QuizList.getSelectedQuiz()
  */
 
 (function () {
   "use strict";
 
   var WS_BASE_URL = "https://quiz-api-production-3617.up.railway.app/ws";
+
   var RECONNECT_DELAY_MS = 5000;
 
   var stompClient = null;
@@ -45,13 +44,12 @@
       window.QuizList && typeof window.QuizList.getSelectedQuiz === "function"
         ? window.QuizList.getSelectedQuiz()
         : null;
+
     return quiz ? quiz.slug : null;
   }
 
   /**
-   * Garante que a inscrição do WebSocket está no tópico do quiz
-   * ativo. Não faz nada se já estiver inscrito no slug certo, se
-   * ainda não houver conexão aberta, ou se não houver quiz ativo.
+   * Inscreve no tópico do quiz atualmente selecionado.
    */
   function subscribeToActiveQuiz() {
     var slug = getActiveSlug();
@@ -84,59 +82,90 @@
 
     currentSubscription = stompClient.subscribe(
       "/topic/dashboard/" + slug,
+
       function (message) {
         console.log("WEBSOCKET RECEBIDO:", message.body);
 
-        location.reload(); // força recarregar a página inteira
+        /*
+         * Não faz reload da página.
+         *
+         * Apenas avisa o dashboard que novos dados
+         * precisam ser buscados.
+         */
+        window.dispatchEvent(new Event("dashboard:reload"));
       },
     );
   }
+
   function connect() {
-    if (isConnecting || (stompClient && stompClient.connected)) return;
+    if (isConnecting || (stompClient && stompClient.connected)) {
+      return;
+    }
+
     isConnecting = true;
 
     var socket = new SockJS(WS_BASE_URL);
+
     stompClient = Stomp.over(socket);
-    stompClient.debug = null; // silencia logs verbosos no console
+
+    // remove logs internos do STOMP
+    stompClient.debug = null;
 
     stompClient.connect(
       {},
+
       function onConnected() {
         console.log("WEBSOCKET CONECTADO");
 
         isConnecting = false;
+
         currentSubscription = null;
         currentSlug = null;
 
         subscribeToActiveQuiz();
       },
+
       function onError() {
+        console.log("ERRO NA CONEXÃO WEBSOCKET");
+
         isConnecting = false;
+
         currentSubscription = null;
+
         setTimeout(connect, RECONNECT_DELAY_MS);
       },
     );
 
     socket.onclose = function () {
+      console.log("WEBSOCKET DESCONECTADO");
+
       isConnecting = false;
+
       currentSubscription = null;
+
       setTimeout(connect, RECONNECT_DELAY_MS);
     };
   }
 
-  // Cobre três casos de uma vez, sem precisar de evento novo:
-  // 1) primeira carga (quiz-list.js dispara dashboard:reload assim
-  //    que resolve o quiz ativo, mesmo antes do WebSocket conectar —
-  //    subscribeToActiveQuiz() simplesmente não faz nada até
-  //    stompClient.connected ficar true, e o onConnected() acima
-  //    tenta de novo)
-  // 2) troca de quiz no dropdown
-  // 3) qualquer outro dashboard:reload (ex.: troca de período) — aqui
-  //    o slug não muda, então a função só confirma que a inscrição
-  //    já está correta
+  /*
+   * Reutiliza o evento existente.
+   *
+   * Casos:
+   *
+   * 1 - Primeira carga
+   *     quiz-list resolve o quiz ativo.
+   *
+   * 2 - Troca de quiz
+   *     muda inscrição para outro slug.
+   *
+   * 3 - Atualização via WebSocket
+   *     busca novamente os dados.
+   */
   window.addEventListener("dashboard:reload", subscribeToActiveQuiz);
 
   document.addEventListener("DOMContentLoaded", connect);
 
-  window.QuizWebSocket = { connect: connect };
+  window.QuizWebSocket = {
+    connect: connect,
+  };
 })();
