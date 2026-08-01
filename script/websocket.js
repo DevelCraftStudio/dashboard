@@ -55,15 +55,33 @@
    */
   function subscribeToActiveQuiz() {
     var slug = getActiveSlug();
-    if (!stompClient || !stompClient.connected) return;
-    if (!slug || slug === currentSlug) return;
+
+    console.log("SLUG ATIVO:", slug);
+
+    if (!stompClient || !stompClient.connected) {
+      console.log("WEBSOCKET NÃO CONECTADO");
+      return;
+    }
+
+    if (!slug) {
+      console.log("NENHUM QUIZ SELECIONADO");
+      return;
+    }
+
+    if (slug === currentSlug) {
+      console.log("JÁ INSCRITO NO SLUG:", slug);
+      return;
+    }
 
     if (currentSubscription) {
       currentSubscription.unsubscribe();
       currentSubscription = null;
     }
 
+    console.log("ASSINANDO TÓPICO:", "/topic/dashboard/" + slug);
+
     currentSlug = slug;
+
     currentSubscription = stompClient.subscribe(
       "/topic/dashboard/" + slug,
       function (message) {
@@ -73,7 +91,6 @@
       },
     );
   }
-
   function connect() {
     if (isConnecting || (stompClient && stompClient.connected)) return;
     isConnecting = true;
@@ -85,9 +102,12 @@
     stompClient.connect(
       {},
       function onConnected() {
+        console.log("WEBSOCKET CONECTADO");
+
         isConnecting = false;
         currentSubscription = null;
         currentSlug = null;
+
         subscribeToActiveQuiz();
       },
       function onError() {
