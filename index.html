@@ -249,6 +249,14 @@
     </div>
 
     <!--
+    Bibliotecas de WebSocket (STOMP sobre SockJS), usadas por
+    script/websocket.js para conectar em /ws e escutar
+    /topic/dashboard/{quizId}.
+  -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <!--
   Ordem importa:
   1) storage.js          - não depende de nada, acesso ao LocalStorage
   2) dashboard.js         - depende de storage.js (POST na API, request
@@ -258,15 +266,20 @@
      resposta pronta e desenha cards + funil
   4) quiz-list.js         - depende de storage.js (persiste o quiz
      ativo e dispara "dashboard:reload"); define window.QuizList
-  5) novo-quiz.js         - depende de quiz-list.js (checa colisão de
+  5) websocket.js         - depende de quiz-list.js (window.QuizList)
+     e das libs SockJS/StompJS carregadas acima; conecta em /ws e
+     dispara "dashboard:reload" sempre que o backend publica um
+     DASHBOARD_REFRESH
+  6) novo-quiz.js         - depende de quiz-list.js (checa colisão de
      slug e insere o quiz recém-criado)
-  6) javascript.js        - orquestra tudo, escuta "dashboard:reload"
+  7) javascript.js        - orquestra tudo, escuta "dashboard:reload"
      e chama renderDashboard()
 -->
     <script src="script/storage.js"></script>
     <script src="script/dashboard.js"></script>
     <script src="script/dashboard-render.js"></script>
     <script src="script/quiz-list.js"></script>
+    <script src="script/websocket.js"></script>
     <script src="script/novo-quiz.js"></script>
     <script src="script/javascript.js"></script>
   </body>
