@@ -103,15 +103,32 @@
         </div>
       </div>
 
-      <!-- CARDS -->
+      <!--
+        CARDS
+        Métricas vêm de response.summary.metrics:
+        { started, viewLanding, completed, viewedResult, clickedResult, viewedOffer, clickedOffer }
+
+        "started" é a base de 100% (pessoas que entraram no site, antes
+        de chegar na landing do quiz). Os demais cards mostram % em
+        relação a "started".
+      -->
       <section class="cards" id="summaryCards" aria-label="Resumo de métricas">
-        <article class="card" data-metric="entered">
-          <p class="card__label">Entraram no quiz</p>
+        <article class="card" data-metric="started">
+          <p class="card__label">Entraram no site</p>
           <p class="card__value" data-value>—</p>
           <span class="card__track"
             ><span class="card__fill" data-fill style="width: 100%"></span
           ></span>
           <p class="card__hint">100% da base</p>
+        </article>
+
+        <article class="card" data-metric="viewLanding">
+          <p class="card__label">Entraram no quiz</p>
+          <p class="card__value" data-value>—</p>
+          <span class="card__track"
+            ><span class="card__fill" data-fill></span
+          ></span>
+          <p class="card__hint" data-hint>—</p>
         </article>
 
         <article class="card" data-metric="completed">

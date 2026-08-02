@@ -33,7 +33,8 @@ const DASHBOARD_API_BASE_URL =
 const MOCK_DASHBOARD_RESPONSE = {
   summary: {
     metrics: {
-      entered: 12500,
+      started: 12500,
+      viewLanding: 12100,
       completed: 8400,
       viewedResult: 8000,
       clickedResult: 3500,

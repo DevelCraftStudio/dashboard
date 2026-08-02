@@ -2,7 +2,7 @@
  * dashboard-render.js
  *
  * Responsabilidade: pegar a resposta do dashboard (já no formato real
- * de DashboardResponse) e desenhar na tela: os 4 cards de resumo e o
+ * de DashboardResponse) e desenhar na tela: os cards de resumo e o
  * funil (etapas + perguntas com distribuição de respostas).
  *
  * NÃO faz fetch e NÃO acessa o LocalStorage — só recebe o objeto já
@@ -11,7 +11,10 @@
  * Formato esperado (response):
  *   {
  *     summary: {
- *       metrics: { entered, completed, viewedResult, clickedResult, viewedOffer, clickedOffer },
+ *       metrics: {
+ *         started, viewLanding, completed,
+ *         viewedResult, clickedResult, viewedOffer, clickedOffer
+ *       },
  *       questions: [{ questionNumber, totalAnswers, options: [{ option, totalAnswers, percentage }] }]
  *     },
  *     funnel: {
@@ -19,6 +22,10 @@
  *       questions: [{ question, total, valueRate, dropRate }]
  *     }
  *   }
+ *
+ * "started" é a base (100%) usada pra calcular o percentual dos
+ * demais cards — representa quem entrou no site, antes mesmo de
+ * chegar na landing do quiz (viewLanding).
  */
 
 // Paleta das respostas (A/B/C/D...): tons neutros/frios, longe do
@@ -67,20 +74,27 @@ function roundPct(value) {
 // Cards de resumo
 // ---------------------------------------------------------------------
 
+/**
+ * Desenha os cards de métricas. "started" (pessoas que entraram no
+ * site) é a base de 100% usada pra calcular a % dos demais cards.
+ */
 function renderCards(metrics) {
-  const entered = metrics.entered || 0;
+  const base = metrics.started || 0;
 
   const hints = {
-    entered: () => "100% da base",
-    completed: (v) => `${percentOf(v, entered)}% dos que entraram`,
-    viewedOffer: (v) => `${percentOf(v, entered)}% dos que entraram`,
-    clickedOffer: (v) => `${percentOf(v, entered)}% dos que entraram`,
+    started: () => "100% da base",
+    viewLanding: (v) => `${percentOf(v, base)}% dos que entraram`,
+    completed: (v) => `${percentOf(v, base)}% dos que entraram`,
+    viewedResult: (v) => `${percentOf(v, base)}% dos que entraram`,
+    clickedResult: (v) => `${percentOf(v, base)}% dos que entraram`,
+    viewedOffer: (v) => `${percentOf(v, base)}% dos que entraram`,
+    clickedOffer: (v) => `${percentOf(v, base)}% dos que entraram`,
   };
 
   document.querySelectorAll("[data-metric]").forEach((card) => {
     const metric = card.dataset.metric;
     const value = metrics[metric] ?? 0;
-    const pct = percentOf(value, entered);
+    const pct = percentOf(value, base);
 
     card.querySelector("[data-value]").textContent = formatNumber(value);
 
