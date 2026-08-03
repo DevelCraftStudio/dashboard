@@ -156,6 +156,65 @@ body {
   opacity: 0.5;
 }
 
+/* ---------- WEBHOOK LINK (mesmo design do quiz-picker-group) ---------- */
+
+.topbar__webhook {
+  flex-shrink: 0;
+}
+
+.webhook-picker-group {
+  display: inline-flex;
+  align-items: stretch;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 320px;
+}
+
+.webhook-picker {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.45);
+  padding: 8px 16px 8px 14px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.webhook-picker-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  flex: 0 0 36px;
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.12);
+  background: transparent;
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.webhook-picker-copy:hover:not(:disabled) {
+  background: rgba(255,255,255,0.11);
+  color: #fff;
+}
+
+.webhook-picker-copy:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.webhook-picker-copy.is-copied {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ---------- QUIZ DROPDOWN ---------- */
 
 .quiz-dropdown {
@@ -757,6 +816,21 @@ body {
   .quiz-dropdown {
     left: -14px;
   }
+}
+
+@media (max-width: 768px) {
+  .cards { grid-template-columns: repeat(2, 1fr); }
+
+  .webhook-picker-group { max-width: 180px; }
+
+  .funnel-head__cols,
+  .funnel-row__top {
+    grid-template-columns: 104px 1fr 56px 60px;
+    gap: 10px;
+  }
+
+  .funnel-row__pct { width: 32px; font-size: 12px; }
+  .funnel-row__drop { font-size: 11px; padding: 3px 6px; }
 }
 
 /* ==========================================================

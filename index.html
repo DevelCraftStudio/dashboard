@@ -17,6 +17,11 @@
     O seletor de quiz consome GET http://localhost:8080/quiz, que retorna
     uma lista de { name, slug }. O dropdown já é renderizado em loop, então
     aceita quantos itens vierem do backend sem precisar de ajuste.
+
+    O bloco de webhook (webhook.js) consome
+    GET .../link/{slug}/webhook, que retorna { url }, e mostra o link
+    do quiz ativo com botão de copiar — atualiza sozinho toda vez que
+    o quiz ativo muda (evento "dashboard:reload").
   -->
     <header class="topbar">
       <div class="topbar__brand">
@@ -70,6 +75,39 @@
           <ul class="quiz-dropdown__list" id="quizDropdownList" role="listbox">
             <!-- itens renderizados via JS -->
           </ul>
+        </div>
+      </div>
+
+      <div class="topbar__webhook" id="webhookSelector">
+        <div class="webhook-picker-group">
+          <span class="webhook-picker" id="webhookUrlLabel"
+            >Carregando link…</span
+          >
+          <button
+            type="button"
+            class="webhook-picker-copy"
+            id="webhookCopyBtn"
+            disabled
+            title="Copiar link do webhook"
+            aria-label="Copiar link do webhook"
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <rect
+                x="4.5"
+                y="4.5"
+                width="7"
+                height="7"
+                rx="1.5"
+                stroke="currentColor"
+                stroke-width="1.3"
+              />
+              <path
+                d="M2.5 8.5H2A1.5 1.5 0 0 1 0.5 7V2A1.5 1.5 0 0 1 2 0.5H7A1.5 1.5 0 0 1 8.5 2V2.5"
+                stroke="currentColor"
+                stroke-width="1.3"
+              />
+            </svg>
+          </button>
         </div>
       </div>
     </header>
@@ -283,19 +321,23 @@
      resposta pronta e desenha cards + funil
   4) quiz-list.js         - depende de storage.js (persiste o quiz
      ativo e dispara "dashboard:reload"); define window.QuizList
-  5) websocket.js         - depende de quiz-list.js (window.QuizList)
+  5) webhook.js           - depende de quiz-list.js (window.QuizList) e
+     escuta "dashboard:reload" pra buscar e exibir o link de webhook
+     do quiz ativo no header
+  6) websocket.js         - depende de quiz-list.js (window.QuizList)
      e das libs SockJS/StompJS carregadas acima; conecta em /ws e
      dispara "dashboard:reload" sempre que o backend publica um
      DASHBOARD_REFRESH
-  6) novo-quiz.js         - depende de quiz-list.js (checa colisão de
+  7) novo-quiz.js         - depende de quiz-list.js (checa colisão de
      slug e insere o quiz recém-criado)
-  7) javascript.js        - orquestra tudo, escuta "dashboard:reload"
+  8) javascript.js        - orquestra tudo, escuta "dashboard:reload"
      e chama renderDashboard()
 -->
     <script src="script/storage.js"></script>
     <script src="script/dashboard.js"></script>
     <script src="script/dashboard-render.js"></script>
     <script src="script/quiz-list.js"></script>
+    <script src="script/webhook.js"></script>
     <script src="script/websocket.js"></script>
     <script src="script/novo-quiz.js"></script>
     <script src="script/javascript.js"></script>

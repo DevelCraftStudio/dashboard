@@ -6,7 +6,8 @@
  * mandando renderizar o resultado.
  *
  * NÃO conhece detalhes internos de storage.js, dashboard.js,
- * dashboard-render.js, quiz-list.js ou novo-quiz.js — apenas os aciona.
+ * dashboard-render.js, quiz-list.js, webhook.js ou novo-quiz.js —
+ * apenas os aciona.
  */
 
 const DASHBOARD_RELOAD_EVENT = "dashboard:reload";
@@ -58,6 +59,13 @@ document.addEventListener("DOMContentLoaded", () => {
    * dashboard:reload
    */
   QuizList.init();
+
+  /*
+   * Inicializa o bloco de link de webhook no header.
+   * Definido em webhook.js. Escuta "dashboard:reload" pra se manter
+   * sincronizado com o quiz ativo.
+   */
+  WebhookLink.init();
 
   /*
    * Inicializa modal de criação de quiz.
