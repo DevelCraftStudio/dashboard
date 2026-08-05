@@ -40,6 +40,7 @@ const MOCK_DASHBOARD_RESPONSE = {
       clickedResult: 3500,
       viewedOffer: 6200,
       clickedOffer: 1800,
+      paid: 900,
     },
 
     questions: [],

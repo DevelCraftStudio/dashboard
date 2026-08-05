@@ -144,7 +144,7 @@
       <!--
         CARDS
         Métricas vêm de response.summary.metrics:
-        { started, viewLanding, completed, viewedResult, clickedResult, viewedOffer, clickedOffer }
+        { started, viewLanding, completed, viewedResult, clickedResult, viewedOffer, clickedOffer, paid }
 
         "started" é a base de 100% (pessoas que entraram no site, antes
         de chegar na landing do quiz). Os demais cards mostram % em
@@ -187,8 +187,17 @@
           <p class="card__hint" data-hint>—</p>
         </article>
 
-        <article class="card card--accent" data-metric="clickedOffer">
-          <p class="card__label">Concluíram</p>
+        <article class="card" data-metric="clickedOffer">
+          <p class="card__label">Clicaram na oferta</p>
+          <p class="card__value" data-value>—</p>
+          <span class="card__track"
+            ><span class="card__fill" data-fill></span
+          ></span>
+          <p class="card__hint" data-hint>—</p>
+        </article>
+
+        <article class="card card--accent" data-metric="paid">
+          <p class="card__label">Pagaram</p>
           <p class="card__value" data-value>—</p>
           <span class="card__track card__track--light"
             ><span class="card__fill card__fill--light" data-fill></span

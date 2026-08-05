@@ -13,7 +13,7 @@
  *     summary: {
  *       metrics: {
  *         started, viewLanding, completed,
- *         viewedResult, clickedResult, viewedOffer, clickedOffer
+ *         viewedResult, clickedResult, viewedOffer, clickedOffer, paid
  *       },
  *       questions: [{ questionNumber, totalAnswers, options: [{ option, totalAnswers, percentage }] }]
  *     },
@@ -47,6 +47,7 @@ const FUNNEL_STEP_LABELS = {
   CLICK_RESULT: "Clicou no resultado",
   VIEW_OFFER: "Visualizou oferta",
   CLICK_OFFER: "Clicou na oferta",
+  PAID: "Pagou",
 };
 
 function humanizeStep(step) {
@@ -89,6 +90,7 @@ function renderCards(metrics) {
     clickedResult: (v) => `${percentOf(v, base)}% dos que entraram`,
     viewedOffer: (v) => `${percentOf(v, base)}% dos que entraram`,
     clickedOffer: (v) => `${percentOf(v, base)}% dos que entraram`,
+    paid: (v) => `${percentOf(v, base)}% dos que entraram`,
   };
 
   document.querySelectorAll("[data-metric]").forEach((card) => {
